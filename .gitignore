@@ -1,0 +1,17 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Data
+data/
+*.csv
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# macOS
+.DS_Store
