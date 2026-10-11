@@ -15,6 +15,46 @@ import streamlit as st
 import core
 import schema
 
+# Columns whose values are real dollar amounts (not "income", which schema.py
+# documents as being in thousands of dollars -- formatting it as a raw dollar
+# figure would misrepresent the magnitude).
+_CURRENCY_NAME_HINTS = (
+    "loan_amount", "property_value", "loan_costs", "points_and_fees",
+    "origination_charges", "discount_points", "lender_credits",
+    "median_family_income",
+)
+
+# Coded columns (action_taken, loan_type, county_code, ...) mapped to their
+# label dicts from schema.py. Columns whose "values" entries are empty strings
+# (e.g. derived_loan_product_type, where the key IS already the label) are
+# included too; _label_value below leaves those untouched.
+_CATEGORICAL_LABELS: dict[str, dict] = {c.name.lower(): c.values for c in schema.COLUMNS if c.values}
+
+
+def _is_currency_column(name: str) -> bool:
+    lowered = name.lower()
+    return any(hint in lowered for hint in _CURRENCY_NAME_HINTS)
+
+
+def _label_value(value, labels: dict):
+    label = labels.get(value)
+    return label if label else value
+
+
+def _format_results_table(rows: list[tuple], columns: list[str]) -> pd.DataFrame:
+    """Build the display dataframe, mapping any column that matches a coded
+    HMDA field (by exact name) to its human-readable label. Currency decimal
+    formatting is applied separately via column_config at the call site, so
+    the underlying values here stay numeric.
+    """
+    df = pd.DataFrame(rows, columns=columns)
+    for col in df.columns:
+        labels = _CATEGORICAL_LABELS.get(col.lower())
+        if labels:
+            df[col] = df[col].map(lambda v: _label_value(v, labels))
+    return df
+
+
 st.set_page_config(page_title="HMDA Natural Language Explorer", page_icon="\U0001f3e0")
 
 st.title("HMDA Natural Language Explorer")
@@ -47,10 +87,18 @@ if result is not None:
     st.subheader(result.question)
 
     if result.status == "success":
-        st.success(result.answer or "Query succeeded, but no summary could be generated.")
+        # st.markdown treats "$...$" as LaTeX math -- escape literal dollar signs
+        # so amounts like "$425,000" render as text, not a (broken) equation.
+        answer_text = result.answer.replace("$", "\\$") if result.answer else None
+        st.markdown(answer_text or "Query succeeded, but no summary could be generated.")
 
         if result.rows:
-            st.dataframe(pd.DataFrame(result.rows, columns=result.columns))
+            column_config = {
+                col: st.column_config.NumberColumn(format="$%,.0f")
+                for col in result.columns
+                if _is_currency_column(col)
+            }
+            st.dataframe(_format_results_table(result.rows, result.columns), column_config=column_config)
             if result.truncated:
                 st.caption(f"Showing the first {result.row_count} rows; the full result set was larger.")
         else:

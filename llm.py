@@ -141,7 +141,12 @@ Write a short, plain-English answer (1-3 sentences) to the question, using ONLY 
 query results given below -- do not use outside knowledge or assume anything not
 present in the data.
 
-- Use proper units where relevant (e.g. "$425,000", not "425000"; "48%", not "0.48").
+- Use proper units and consistent formatting:
+  - Dollar amounts: prefix with "$" and use comma thousands separators, rounded to the
+    nearest whole dollar (e.g. "$425,000", not "425000" or "$425,000.00").
+  - Percentages: convert ratios to a "%"-suffixed value with at most one decimal place
+    (e.g. "48.3%", not "0.483" or "48.342%").
+  - Large counts: use comma thousands separators (e.g. "12,458 applications", not "12458").
 - If the results are empty or missing (no rows), say so plainly instead of guessing
   an answer -- e.g. "No matching applications were found."
 - If the results were truncated (noted below), mention that the answer is based on a
