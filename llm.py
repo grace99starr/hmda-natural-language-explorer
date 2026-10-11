@@ -44,6 +44,11 @@ Respond with a JSON object with three fields: status, sql, message.
 """
 
 
+class SQLGenerationError(Exception):
+    """Raised when Claude's response can't be turned into a valid SQLResponse
+    (truncated JSON, or valid JSON that fails SQLResponse's own invariants)."""
+
+
 class SQLResponse(BaseModel):
     status: Literal["success", "clarification_needed", "unanswerable"]
     sql: str | None
@@ -90,7 +95,15 @@ def test_connection() -> str:
 
 
 def generate_sql(question: str) -> SQLResponse:
-    """Ask Claude to translate a natural language question into a structured SQL response."""
+    """Ask Claude to translate a natural language question into a structured SQL response.
+
+    Raises SQLGenerationError if Claude's response can't be turned into a valid
+    SQLResponse (truncated JSON, or JSON that violates SQLResponse's own
+    invariants) -- callers should treat this the same as an anthropic.APIError,
+    a failure of this specific call, not a reason to crash. A missing API key
+    (get_client()'s RuntimeError) is deliberately NOT caught here: that's a
+    config problem, not a per-question one, and should fail loudly.
+    """
     client = get_client()
     try:
         response = client.messages.parse(
@@ -110,15 +123,57 @@ def generate_sql(question: str) -> SQLResponse:
         # A response cut short by max_tokens leaves truncated JSON, which fails
         # validation with a json_invalid error rather than a clean field error.
         if any(err["type"] == "json_invalid" for err in e.errors()):
-            raise RuntimeError(
+            raise SQLGenerationError(
                 "Claude's response was truncated before it could be parsed as JSON. "
                 "Increase max_tokens and retry."
             ) from e
-        raise
+        raise SQLGenerationError(f"Claude's response did not match the expected schema: {e}") from e
 
     if response.stop_reason == "refusal":
         return SQLResponse(status="unanswerable", sql=None, message="Claude declined to answer this question.")
     return response.parsed_output
+
+
+_SUMMARY_INSTRUCTIONS = """You are summarizing the result of a SQL query run against the `hmda`
+mortgage data table, for someone who asked a natural language question.
+
+Write a short, plain-English answer (1-3 sentences) to the question, using ONLY the
+query results given below -- do not use outside knowledge or assume anything not
+present in the data.
+
+- Use proper units where relevant (e.g. "$425,000", not "425000"; "48%", not "0.48").
+- If the results are empty or missing (no rows), say so plainly instead of guessing
+  an answer -- e.g. "No matching applications were found."
+- If the results were truncated (noted below), mention that the answer is based on a
+  partial result set.
+- Do not repeat the SQL back verbatim; describe the answer in words.
+"""
+
+
+def summarize_result(
+    question: str, sql: str, columns: list[str], rows: list[tuple], truncated: bool
+) -> str:
+    """Ask Claude for a short plain-English answer to `question`, given the rows
+    returned by running `sql`. Raises anthropic.APIError on API failure --
+    callers that already have the sql/rows in hand should catch this and
+    degrade gracefully rather than losing those results.
+    """
+    client = get_client()
+    results_block = (
+        f"Columns: {columns}\nRows: {rows}\nTruncated: {truncated}"
+        if rows
+        else "Rows: (none)"
+    )
+    user_message = f"Question: {question}\n\nSQL: {sql}\n\n{results_block}"
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=256,
+        system=_SUMMARY_INSTRUCTIONS,
+        messages=[{"role": "user", "content": user_message}],
+    )
+    if response.stop_reason == "refusal":
+        return "Claude declined to summarize this result."
+    return response.content[0].text
 
 
 if __name__ == "__main__":
