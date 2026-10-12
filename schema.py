@@ -91,7 +91,7 @@ DENIAL_REASON_CODES = {
 }
 DENIAL_REASON1_EXTRA = {10: "Not applicable (not a denied application)"}
 
-AGE_BRACKETS_NOTE = "Binned string: '<25','25-34','35-44','45-54','55-64','65-74','>74'. 8888 = no co-applicant (co-applicant_age only). 9999 = age not available."
+AGE_BRACKETS_NOTE = "Binned string: '<25','25-34','35-44','45-54','55-64','65-74','>74'. 8888 = not applicable (applicant/co-applicant is not a natural person, e.g. a business entity; can appear in applicant_age too, not just co-applicant_age). 9999 = no co-applicant (co-applicant_age only)."
 
 YES_NO_EXEMPT = {1: "Yes", 2: "No", 1111: "Exempt"}
 

@@ -4,6 +4,9 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 
+# Evaluation output (generated per-run, contains live Claude output)
+evaluation/results.json
+
 # Data
 data/
 *.csv
