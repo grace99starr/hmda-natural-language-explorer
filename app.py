@@ -65,8 +65,16 @@ def _format_results_table(rows: list[tuple], columns: list[str]) -> pd.DataFrame
 @st.cache_data
 def _dataset_record_count() -> int | None:
     """Row count of the live `hmda` table, via the same run_query() entry
-    point used for real questions -- not re-derived or hardcoded."""
-    result = database.run_query(f"SELECT COUNT(*) FROM {schema.TABLE_NAME}")
+    point used for real questions -- not re-derived or hardcoded.
+
+    Runs at page load, before the question-submission try/except exists to
+    catch anything -- so failures here (e.g. a missing data/hmda_2024.csv)
+    must be swallowed locally rather than left to crash the whole page.
+    """
+    try:
+        result = database.run_query(f"SELECT COUNT(*) FROM {schema.TABLE_NAME}")
+    except Exception:
+        return None
     return result.rows[0][0] if result.status == "ok" else None
 
 
