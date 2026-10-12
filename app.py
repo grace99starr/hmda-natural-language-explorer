@@ -13,7 +13,14 @@ import pandas as pd
 import streamlit as st
 
 import core
+import database
 import schema
+
+EXAMPLE_QUESTIONS = (
+    "What is the average loan amount by loan type?",
+    "How many applications were denied in each county?",
+    "What were the most common denial reasons?",
+)
 
 # Columns whose values are real dollar amounts (not "income", which schema.py
 # documents as being in thousands of dollars -- formatting it as a raw dollar
@@ -55,13 +62,57 @@ def _format_results_table(rows: list[tuple], columns: list[str]) -> pd.DataFrame
     return df
 
 
+@st.cache_data
+def _dataset_record_count() -> int | None:
+    """Row count of the live `hmda` table, via the same run_query() entry
+    point used for real questions -- not re-derived or hardcoded."""
+    result = database.run_query(f"SELECT COUNT(*) FROM {schema.TABLE_NAME}")
+    return result.rows[0][0] if result.status == "ok" else None
+
+
 st.set_page_config(page_title="HMDA Natural Language Explorer", page_icon="\U0001f3e0")
 
 st.title("HMDA Natural Language Explorer")
 st.caption("Ask a question in plain English about 2024 HMDA mortgage applications.")
 
-with st.expander("About this dataset"):
-    st.markdown(schema.GLOBAL_NOTES)
+with st.expander("About This Explorer"):
+    st.markdown(
+        "Explore mortgage lending data using everyday language. Ask a question, "
+        "and the tool will generate and execute a SQL query to find an answer."
+    )
+
+    st.markdown("**What's in the dataset?**")
+    record_count = _dataset_record_count()
+    stat_col1, stat_col2 = st.columns(2)
+    stat_col1.metric("Reporting year", "2024")
+    stat_col2.metric("Mortgage records", f"{record_count:,}" if record_count is not None else "—")
+    st.markdown(
+        "The dataset contains publicly reported mortgage lending information for "
+        "Los Angeles and Santa Barbara counties in California, including loan "
+        "amounts, loan types, interest rates, application outcomes, and denial reasons."
+    )
+
+    st.markdown("**Example questions**")
+    for q in EXAMPLE_QUESTIONS:
+        st.markdown(f"- {q}")
+
+    st.markdown("**How it works**")
+    st.markdown(
+        "Your question is translated into SQL, checked for safety, and executed "
+        "against the dataset. You can inspect the generated SQL and underlying "
+        "results to verify the answer."
+    )
+
+    st.markdown("**Things to know**")
+    st.markdown(
+        "This tool only covers 2024 data from the two counties listed above. It "
+        "cannot answer questions about other years, locations, credit scores, or "
+        "mortgage payment history. Some questions may require clarification, and "
+        "results depend on how metrics such as approval or denial rates are defined. "
+        "For the full definitions of coded fields (e.g. denial reasons, loan types), "
+        "see the [FFIEC LAR data field documentation]"
+        "(https://ffiec.cfpb.gov/documentation/publications/loan-level-datasets/lar-data-fields)."
+    )
 
 with st.form("question_form"):
     question = st.text_input(
