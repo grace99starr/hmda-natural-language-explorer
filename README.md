@@ -8,8 +8,8 @@ and the exact SQL query that produced them.
 ## Demo
 
 - **Screen recording:** _TODO — add a link here once recorded (e.g. OBS → YouTube/Drive/Loom link)._
-- **Architecture diagram:** [HMDA Explorer Architecture (Lucidchart)](https://lucid.app/lucidchart/22330c5d-241f-4a70-ab77-da6a5f1793c7/edit)
-- **Written explanation of approach + alternative considered:** _TODO — kept as a separate deliverable from this README; link it here once it's in the repo._
+- **Architecture diagram:** [HMDA Explorer Architecture (Lucidchart)](https://lucid.app/lucidchart/22330c5d-241f-4a70-ab77-da6a5f1793c7/edit) ([PNG export](docs/HMDA%20Explorer%20Architecture.png))
+- **Written explanation of approach + alternative considered:** [`docs/approach.md`](docs/approach.md)
 
 ## What it does
 
@@ -36,9 +36,13 @@ User → app.py (Streamlit UI) → core.py (orchestrator)
      → back through core.py → app.py → User
 ```
 
+![HMDA Explorer architecture diagram](docs/HMDA%20Explorer%20Architecture.png)
+
 See the [Lucidchart diagram](https://lucid.app/lucidchart/22330c5d-241f-4a70-ab77-da6a5f1793c7/edit)
-for the full picture, including the rejected-query and unanswerable/clarification
-paths.
+(editable source for the PNG above) for the full picture, including the
+rejected-query and unanswerable/clarification paths. For the reasoning behind
+these choices — and an alternative design that was considered and rejected —
+see [`docs/approach.md`](docs/approach.md).
 
 Module responsibilities:
 
@@ -151,6 +155,12 @@ full side-by-side record (generated SQL + rows vs. reference SQL + rows) to
 - 20 cases is a small sample. It's enough to sanity-check each of the four
   response modes the pipeline can produce, not a statistically rigorous
   benchmark.
+
+[`docs/approach.md`](docs/approach.md) goes further than status-match: it
+reports a manual numeric-correctness check of the generated SQL against the
+reference queries (7/10 answerable cases, 70%) and discusses where the
+mismatches came from — mostly Claude applying filters or rate definitions
+that weren't explicitly stated in the question.
 
 ## Known limitations
 
