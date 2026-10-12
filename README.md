@@ -7,7 +7,7 @@ and the exact SQL query that produced them.
 
 ## Demo
 
-- **Screen recording:** _TODO — add a link here once recorded (e.g. OBS → YouTube/Drive/Loom link)._
+- **Screen recording:** [HMDA Natural Language Explorer Demo](docs/HMDA%20Natural%20Language%20Explorer%20Demo.mov)
 - **Architecture diagram:** [HMDA Explorer Architecture (Lucidchart)](https://lucid.app/lucidchart/22330c5d-241f-4a70-ab77-da6a5f1793c7/edit) ([PNG export](docs/HMDA%20Explorer%20Architecture.png))
 - **Written explanation of approach + alternative considered:** [`docs/approach.md`](docs/approach.md)
 
